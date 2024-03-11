@@ -8,3 +8,4 @@ members:
 
 qyh080821 = Tiancheng Li
 Sgz26013 = Guozhi Su
+Chelseo = Leyi Yu
