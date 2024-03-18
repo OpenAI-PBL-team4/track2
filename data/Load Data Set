@@ -1,0 +1,19 @@
+from transformers import TextDataset
+
+train_dataset = TextDataset(
+    tokenizer=tokenizer,
+    file_path=train_file_path,
+    block_size=128
+)
+
+valid_dataset = TextDataset(
+    tokenizer=tokenizer,
+    file_path=valid_file_path,
+    block_size=128
+)
+
+test_dataset = TextDataset(
+    tokenizer=tokenizer,
+    file_path=test_file_path,
+    block_size=128
+)
