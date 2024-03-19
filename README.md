@@ -12,3 +12,4 @@ members:
 qyh080821 and LTC = Tiancheng Li  
 Sgz26013 = Guozhi Su  
 Chelseo = Leyi Yu  
+SlingmaoS = Jinfeng Xu
