@@ -2,6 +2,10 @@ import transformers
 import torch
 import copy
 
+type_table = {#"torch.quint8":torch.quint8,
+              "torch.qint8":torch.qint8,
+              #"torch.qint32":torch.qint32,
+              "torch.float16":torch.float16}
 def _conv1d_to_linear(module):
     in_size, out_size = module.weight.shape
     linear = torch.nn.Linear(in_size, out_size)
@@ -21,10 +25,10 @@ def conv1d_to_linear(model):
         else:
             conv1d_to_linear(module)
 
-def apply_quantiztion(model, input):
+def apply_quantiztion(model, input, quant_dtype):
     #model2 = copy.deepcopy(model)
     conv1d_to_linear(model)
-    quantized_model = torch.quantization.quantize_dynamic(model, {torch.nn.Linear}, dtype=torch.qint8)
+    quantized_model = torch.quantization.quantize_dynamic(model, {torch.nn.Linear}, dtype=type_table[quant_dtype])
     model._modules['transformer'] = quantized_model._modules['transformer']
     return quantized_model
     # model_origin = M(model)

@@ -17,7 +17,7 @@ STEP_LIMIT = 80
 model = None
 tokenizer = GPT2Tokenizer.from_pretrained('.././gpt2')
 
-def greet(text, use_pruning, use_quantization, use_knowledge_distillation, use_gpu):
+def greet(text, use_pruning, use_quantization, quant_dtype, use_knowledge_distillation, use_gpu):
     device = torch.device('cpu')
 
     # load tokenizer and model offline
@@ -26,13 +26,13 @@ def greet(text, use_pruning, use_quantization, use_knowledge_distillation, use_g
     print("completed loading")
 
     # fine-tune
-    compress_result = compress_model(use_pruning, use_quantization, use_knowledge_distillation, use_gpu)
+    compress_result = compress_model(use_pruning, use_quantization, use_knowledge_distillation, use_gpu, quant_dtype)
 
     if use_gpu:
         device = torch.device('cuda')
 
-
-
+    global model
+    model = model.to(device)
     in_tokens = torch.tensor(tokenizer.encode(text)).to(device)
     out_token = 0
     step = 0
@@ -71,7 +71,7 @@ def load_model():
 
     model.eval()
 
-def compress_model(use_pruning, use_quantization, use_knowledge_distillation, use_gpu):
+def compress_model(use_pruning, use_quantization, use_knowledge_distillation, use_gpu, quant_dtype):
     # apply 3 different fine-tune technique by modify the model
 
     # logs when applying the techniques
@@ -82,10 +82,10 @@ def compress_model(use_pruning, use_quantization, use_knowledge_distillation, us
         compress_result += apply_pruning(model)
     if use_quantization:
         if use_gpu:
-            compress_result += "Cannot use gpu for pytorch qint8 quantization\n"
+            compress_result += "Cannot use gpu for pytorch quantization\n"
         else:
             dimmy_input = torch.tensor(tokenizer.encode("hi"))
-            apply_quantiztion(model, dimmy_input)
+            apply_quantiztion(model, dimmy_input, quant_dtype)
     if use_knowledge_distillation:
         apply_knowledge_distillation(model)
     size_2 = size_check(model)
@@ -96,7 +96,7 @@ def warm_up(in_tokens):
     # Warn-up gpu, cpu
     for _ in range(5):
         start = time.time()
-        model(in_tokens.to(torch.device("cpu")))
+        model(in_tokens)
         torch.cuda.synchronize()
         end = time.time()
         print('Time:{}ms'.format((end - start) * 1000))
