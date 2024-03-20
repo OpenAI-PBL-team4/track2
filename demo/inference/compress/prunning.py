@@ -1,6 +1,10 @@
 import torch.nn.utils.prune as prune
 import transformers
 import torch
+import torch_pruning
+
+class MyMagnitudeImportance(torch_pruning.importance.Importance):
+    pass
 
 def sparsity(name, module):
     return "Sparsity in " + name + ": {:.2f}%".format(
@@ -8,7 +12,7 @@ def sparsity(name, module):
             / float(module.weight.nelement())
         ) + "\n"
 
-def apply_pruning(model):
+def apply_pruning_old(model):
     prunning_result = ""
     print("#################Pruning#####################\n")
     prunning_result += "#################Pruning#####################\n"
@@ -32,3 +36,6 @@ def apply_pruning(model):
     print("#################Pruned#######################\n")
 
     return prunning_result
+
+def apply_pruning(model, example_inputs):
+    pass
