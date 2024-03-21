@@ -11,7 +11,23 @@ import time
 import transformers
 
 def dynamic_quantization(model,layer,mode):
+  quantized_model = torch.quantization.quantize_dynamic(model, {layer}, dtype=mode)
+  return quantized_model
 
+def basic_information():
+  print("transformers version:", transformers.__version__)
+  print("torch version:", torch.__version__)
+  if torch.cuda.is_available():
+      num_devices = torch.cuda.device_count()
+      print("Available Gpus", num_devices)
+      for i in range(num_devices):
+          device = torch.cuda.get_device_properties(i)
+          print(f"\nGPU {i} detail:")
+          print("name:", device.name)
+          print("capable:", f"{device.major}.{device.minor}")
+          print("GB:", round(device.total_memory / (1024**3), 1))
+      else:
+          print("no use GPU")    
 
 def model_quantization_test(model,label):
   for name, param in model.named_parameters():
@@ -27,8 +43,14 @@ def print_size_of_model(model, label=""):
     os.remove('temp.p')
     return size
 
-model = transformers.GPT2LMHeadModel.from_pretrained("./autodl-tmp/1_gpt2")
-quantized_model = torch.quantization.quantize_dynamic(model, {nn.Linear}, dtype=torch.qint8)
+if __name__ == "main":
 
-total_parameters = model.num_parameters()
-print("Total parameters in 8b:", total_parameters)
+  basic_information()
+  
+  model = transformers.GPT2LMHeadModel.from_pretrained("gpt2")
+  tokenizer = transformers.GPT2TokenizerFast.from_pretrained("gpt2")
+
+  
+  
+  total_parameters = model.num_parameters()
+  print("Total parameters in 8b:", total_parameters)
