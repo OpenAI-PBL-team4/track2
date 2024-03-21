@@ -8,10 +8,12 @@ type_table = {#"torch.quint8":torch.quint8,
 
 
 def apply_quantiztion(model, input, quant_dtype):
-
+    quantization_result = ""
+    quantization_result += "#################Quantizing#####################\n"
     quantized_model = torch.quantization.quantize_dynamic(model, {torch.nn.Linear}, dtype=type_table[quant_dtype])
     model._modules['transformer'] = quantized_model._modules['transformer']
-    return quantized_model
+    quantization_result += "#################Quantized#####################\n"
+    return quantization_result
     # model_origin = M(model)
     # model_origin.eval()
     # model_origin.qconfig = torch.quantization.get_default_qconfig("qnnpack")

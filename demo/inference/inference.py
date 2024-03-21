@@ -10,7 +10,7 @@ from track2.demo.inference.compress.conv1d_to_linear import conv1d_to_linear
 # set mirror for downloading the model
 os.environ["HF_ENDPOINT"] = "http://hf-mirror.com/"
 # set the max number of loops
-STEP_LIMIT = 80
+STEP_LIMIT = 30
 
 # load tokenizer and model online
 # tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
@@ -18,7 +18,12 @@ STEP_LIMIT = 80
 model = None
 tokenizer = GPT2Tokenizer.from_pretrained('.././gpt2')
 
-def greet(text, use_pruning, use_quantization, quant_dtype, use_knowledge_distillation, use_gpu):
+
+def greet(text, use_pruning, pruning_rate, pruning_iteration,
+          use_quantization, quant_dtype,
+          use_knowledge_distillation,
+          use_gpu):
+
     device = torch.device('cpu')
     if use_gpu:
         device = torch.device('cuda')
@@ -28,7 +33,10 @@ def greet(text, use_pruning, use_quantization, quant_dtype, use_knowledge_distil
     print("completed loading")
 
     # fine-tune
-    compress_result = compress_model(use_pruning, use_quantization, use_knowledge_distillation, use_gpu, quant_dtype)
+    compress_result = compress_model(use_pruning, pruning_rate, pruning_iteration,
+                                     use_quantization, quant_dtype,
+                                     use_knowledge_distillation,
+                                     use_gpu)
 
 
 
@@ -72,7 +80,11 @@ def load_model():
 
     model.eval()
 
-def compress_model(use_pruning, use_quantization, use_knowledge_distillation, use_gpu, quant_dtype):
+
+def compress_model(use_pruning, pruning_rate, pruning_iteration,
+                   use_quantization, quant_dtype,
+                   use_knowledge_distillation,
+                   use_gpu):
     # apply 3 different fine-tune technique by modify the model
 
     # logs when applying the techniques
@@ -81,24 +93,34 @@ def compress_model(use_pruning, use_quantization, use_knowledge_distillation, us
     example_inputs = torch.tensor(tokenizer.encode("hi!")).to(torch.device("cpu") if not use_gpu
                                                               else torch.device("cuda"))
     size_1 = size_check(model)
+    size_2 = size_check(model)
     # transpose conv1d to nn.linear before apply finetune
     if use_pruning or use_quantization:
+        compress_result += "############Converting conv1d to linear##############\n"
         conv1d_to_linear(model)
+        compress_result += show_size_change(model, size_1)
+        size_1 = size_check(model)
+
 
     if use_pruning:
-        compress_result += apply_pruning(model, example_inputs)
+        compress_result += apply_pruning(model, example_inputs, pruning_rate, pruning_iteration)
+        compress_result += show_size_change(model, size_1)
+        size_1 = size_check(model)
 
     if use_quantization:
         if use_gpu:
             compress_result += "Cannot use gpu for pytorch quantization\n"
         else:
             dimmy_input = torch.tensor(tokenizer.encode("hi"))
-            apply_quantiztion(model, dimmy_input, quant_dtype)
+            compress_result += apply_quantiztion(model, dimmy_input, quant_dtype)
+            compress_result += show_size_change(model, size_1)
+            size_check(model)
 
     if use_knowledge_distillation:
         apply_knowledge_distillation(model)
-    size_2 = size_check(model)
-    compress_result += size_1 + "->>>>>" + size_2 + "\n"
+        compress_result += show_size_change(model, size_1)
+        size_1 = size_check(model)
+
     return compress_result
 
 def warm_up(in_tokens):
@@ -120,6 +142,13 @@ def size_check(model):
 
     size_all_mb = (param_size + buffer_size) / 1024 ** 2
     return 'model size: {:.3f}MB'.format(size_all_mb)
+
+def show_size_change(model, size_1):
+    size_2 = size_check(model)
+    compress_result = size_1 + "->>>>>" + size_2 + "\n"
+
+    return compress_result
+
 
 
 
