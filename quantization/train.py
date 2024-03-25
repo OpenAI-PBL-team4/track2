@@ -43,6 +43,14 @@ def print_size_of_model(model, label=""):
     os.remove('temp.p')
     return size
 
+def print_use_time(model,input_text):
+  start_time = time.time()
+  input_ids = tokenizer.encode(input_text, return_tensors="pt")
+  with torch.no_grad():
+    output = model.generate(input_ids)
+  use_time = time.time() - start_time
+  return use_time
+
 if __name__ == "main":
 
   basic_information()
