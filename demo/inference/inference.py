@@ -10,7 +10,7 @@ from track2.demo.inference.compress.conv1d_to_linear import conv1d_to_linear
 # set mirror for downloading the model
 os.environ["HF_ENDPOINT"] = "http://hf-mirror.com/"
 # set the max number of loops
-STEP_LIMIT = 30
+STEP_LIMIT = 100
 
 # load tokenizer and model online
 # tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
@@ -37,8 +37,6 @@ def greet(text, use_pruning, pruning_rate, pruning_iteration,
                                      use_quantization, quant_dtype,
                                      use_knowledge_distillation,
                                      use_gpu)
-
-
 
     global model
     model = model.to(device)
@@ -128,7 +126,7 @@ def warm_up(in_tokens):
     for _ in range(5):
         start = time.time()
         model(in_tokens)
-        torch.cuda.synchronize()
+        # torch.cuda.synchronize()
         end = time.time()
         print('Time:{}ms'.format((end - start) * 1000))
 
