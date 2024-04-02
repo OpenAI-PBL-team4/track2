@@ -95,10 +95,12 @@ def greet(text, use_pruning, pruning_rate, pruning_iteration,
                 step += 1
         out_text = tokenizer.decode(in_tokens)
 
-    trainer.model = model.to("cuda")
     perplexity_new = "cannot calculate when no lora"
-    if not use_quantization:
-        perplexity_new = get_trainer.cal_perplexity(trainer)
+    if use_lora:
+        trainer.model = model.to("cuda")
+        perplexity_new = "cannot calculate when quantization"
+        if not use_quantization:
+            perplexity_new = get_trainer.cal_perplexity(trainer)
     # print(prof.table())
     return out_text, str(perplexity_before) + ">>>" + str(perplexity_new), prof.table(), summary, compress_result
 
