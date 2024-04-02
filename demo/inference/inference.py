@@ -2,7 +2,11 @@ import time
 import torchsummary
 import torch
 from transformers import GPT2Tokenizer, GPT2LMHeadModel
+from datasets import load_dataset
+from track2.demo.datas.preprocess_data import preprocess
+import track2.demo.datas.get_trainer as get_trainer
 import os
+import peft
 from track2.demo.inference.compress.prunning import apply_pruning
 from track2.demo.inference.compress.quantization import apply_quantiztion
 from track2.demo.inference.compress.knowledge_distillation import apply_knowledge_distillation
@@ -10,19 +14,20 @@ from track2.demo.inference.compress.conv1d_to_linear import conv1d_to_linear
 # set mirror for downloading the model
 os.environ["HF_ENDPOINT"] = "http://hf-mirror.com/"
 # set the max number of loops
-STEP_LIMIT = 100
+STEP_LIMIT = 30
 
 # load tokenizer and model online
 # tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
 # model = GPT2LMHeadModel.from_pretrained("gpt2", torchscript=True)
 model = None
 tokenizer = GPT2Tokenizer.from_pretrained('.././gpt2')
-
+tokenizer.pad_token = tokenizer.eos_token
 
 def greet(text, use_pruning, pruning_rate, pruning_iteration,
           use_quantization, quant_dtype,
           use_knowledge_distillation,
-          use_gpu):
+          use_gpu,
+          use_lora):
 
     device = torch.device('cpu')
     if use_gpu:
@@ -32,14 +37,39 @@ def greet(text, use_pruning, pruning_rate, pruning_iteration,
     load_model()
     print("completed loading")
 
+    global model
+    perplexity_before = "cannot calculate when no lora"
+    if use_lora:
+        raw_datasets = load_dataset("./datas/wikitext")
+        validation_data, train_data = preprocess(raw_datasets, tokenizer)
+        trainer = get_trainer.get_trainer(model, validation_data, train_data, tokenizer)
+
+        perplexity_before = get_trainer.cal_perplexity(trainer)
+
+        lora_config = peft.LoraConfig(
+            r=8,
+            lora_alpha=32,
+            target_modules=["lm_head"],
+            lora_dropout=0.05,
+            task_type="CAUSAL_LM",
+            bias="none"
+        )
+        model2 = peft.get_peft_model(model, lora_config)
+        trainer.model = model2
+        trainer.train()
+        model = model2.merge_and_unload()
+
+    model = model.to(device)
+
     # fine-tune
     compress_result = compress_model(use_pruning, pruning_rate, pruning_iteration,
                                      use_quantization, quant_dtype,
                                      use_knowledge_distillation,
                                      use_gpu)
 
-    global model
-    model = model.to(device)
+
+
+
     in_tokens = torch.tensor(tokenizer.encode(text)).to(device)
     out_token = 0
     step = 0
@@ -64,16 +94,19 @@ def greet(text, use_pruning, pruning_rate, pruning_iteration,
 
                 step += 1
         out_text = tokenizer.decode(in_tokens)
+
+    trainer.model = model.to("cuda")
+    perplexity_new = "cannot calculate when no lora"
+    if not use_quantization:
+        perplexity_new = get_trainer.cal_perplexity(trainer)
     # print(prof.table())
-    return out_text, prof.table(), summary, compress_result
+    return out_text, str(perplexity_before) + ">>>" + str(perplexity_new), prof.table(), summary, compress_result
 
 def load_model():
     global model
     # load tokenizer and model offline
     print("loading tokenizer and model")
-    tokenizer = GPT2Tokenizer.from_pretrained('.././gpt2')
     model = GPT2LMHeadModel.from_pretrained('.././gpt2', torchscript=True)
-
     print("completed loading")
 
     model.eval()
