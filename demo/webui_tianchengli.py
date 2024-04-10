@@ -18,7 +18,7 @@ table_colomn_quantization = gr.Dropdown([
     "torch.float16"],
     value="torch.qint8",
     label="Quant Dtype")
-slider_pruning_rate = gr.Slider(minimum=0.05, maximum=0.95, step=0.05, label="pruning_ratio")
+slider_pruning_rate = gr.Slider(minimum=0.01, maximum=0.95, step=0.01, label="pruning_ratio")
 slider_pruning_iteration = gr.Slider(minimum=1, maximum=30, step=1, label="pruning_iteration")
 
 

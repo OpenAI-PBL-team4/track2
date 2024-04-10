@@ -50,6 +50,7 @@ def greet(text, use_pruning, pruning_rate, pruning_iteration,
     if use_lora:
         model2 = peft.AutoPeftModelForCausalLM.from_pretrained("../gpt2/lora")
         model = model2.merge_and_unload()
+        # model = model2
 
     model = model.to(device)
 

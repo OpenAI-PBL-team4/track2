@@ -16,7 +16,7 @@ def apply_pruning(model, example_inputs, pruning_rate, pruning_iteration):
     pruning_result = ""
     pruning_result += "#################Pruning#####################\n"
     imp = torch_pruning.importance.MagnitudeImportance(p=2)
-    ignored_layers = [model.lm_head]
+    ignored_layers = [model.lm_head, model.transformer.wte, model.transformer.wpe]
 
     for m in model.modules():
         if isinstance(m, transformers.models.gpt2.modeling_gpt2.GPT2Attention):
