@@ -10,7 +10,7 @@ def preprocess(raw_datasets, tokenizer):
 
 
     try:
-        f = open("tokenized_data2.pkl", "rb")
+        f = open("tokenized_data.pkl", "rb")
         tokenized_datasets = pickle.load(f)
         f.close()
     except:

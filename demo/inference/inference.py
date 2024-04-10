@@ -14,7 +14,7 @@ from track2.demo.inference.compress.conv1d_to_linear import conv1d_to_linear
 # set mirror for downloading the model
 os.environ["HF_ENDPOINT"] = "http://hf-mirror.com/"
 # set the max number of loops
-STEP_LIMIT = 30
+STEP_LIMIT = 100
 
 # load tokenizer and model online
 # tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
@@ -27,7 +27,8 @@ def greet(text, use_pruning, pruning_rate, pruning_iteration,
           use_quantization, quant_dtype,
           use_knowledge_distillation,
           use_gpu,
-          use_lora):
+          use_lora,
+          evaluate_perplexity):
 
     device = torch.device('cpu')
     if use_gpu:
@@ -38,25 +39,16 @@ def greet(text, use_pruning, pruning_rate, pruning_iteration,
     print("completed loading")
 
     global model
-    perplexity_before = "cannot calculate when no lora"
+    perplexity_before = ""
+    # if evaluate_perplexity:
+    #     raw_datasets = load_dataset("./datas/wikitext")
+    #     validation_data, train_data = preprocess(raw_datasets, tokenizer)
+    #     trainer = get_trainer.get_trainer(model, validation_data, train_data, tokenizer)
+    #
+    #     perplexity_before = get_trainer.cal_perplexity(trainer)
+
     if use_lora:
-        raw_datasets = load_dataset("./datas/wikitext")
-        validation_data, train_data = preprocess(raw_datasets, tokenizer)
-        trainer = get_trainer.get_trainer(model, validation_data, train_data, tokenizer)
-
-        perplexity_before = get_trainer.cal_perplexity(trainer)
-
-        lora_config = peft.LoraConfig(
-            r=8,
-            lora_alpha=32,
-            target_modules=["lm_head"],
-            lora_dropout=0.05,
-            task_type="CAUSAL_LM",
-            bias="none"
-        )
-        model2 = peft.get_peft_model(model, lora_config)
-        trainer.model = model2
-        trainer.train()
+        model2 = peft.AutoPeftModelForCausalLM.from_pretrained("../gpt2/lora")
         model = model2.merge_and_unload()
 
     model = model.to(device)
@@ -83,7 +75,11 @@ def greet(text, use_pruning, pruning_rate, pruning_iteration,
 
         with torch.no_grad():
             while step < STEP_LIMIT:
-                logits, _ = model(in_tokens)
+
+                if use_lora:
+                    logits = model(in_tokens).logits
+                else:
+                    logits, _ = model(in_tokens)
                 # choose the highest score result
                 out_token = torch.argmax(logits[-1, :], dim=0, keepdim=True)
                 in_tokens = torch.cat((in_tokens, out_token), 0)
@@ -95,8 +91,11 @@ def greet(text, use_pruning, pruning_rate, pruning_iteration,
                 step += 1
         out_text = tokenizer.decode(in_tokens)
 
-    perplexity_new = "cannot calculate when no lora"
-    if use_lora:
+    perplexity_new = "cannot calculate when no gpu"
+    if evaluate_perplexity:
+        raw_datasets = load_dataset("./datas/wikitext")
+        validation_data, train_data = preprocess(raw_datasets, tokenizer)
+        trainer = get_trainer.get_trainer(model, validation_data, train_data, tokenizer)
         trainer.model = model.to("cuda")
         perplexity_new = "cannot calculate when quantization"
         if not use_quantization:

@@ -30,6 +30,7 @@ demo = gr.Interface(fn=greet, inputs=[input_custom,
                                       table_colomn_quantization,
                                       "checkbox",
                                       "checkbox",
+                                      "checkbox",
                                       "checkbox"],
                     outputs=[output_result, perplexity, output_time, output_size, output_compression])
 demo.launch(debug=True)

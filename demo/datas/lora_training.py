@@ -8,16 +8,6 @@ import pickle
 from itertools import chain
 import evaluate
 
-def print_trainable_parameters(model):
-    trainable_params = 0
-    all_param = 0
-    for _, param in model.named_parameters():
-        all_param += param.numel()
-        if param.requires_grad:
-            trainable_params += param.numel()
-    print(
-        f"trainable params: {trainable_params} || all params: {all_param} || trainable%: {100 * trainable_params / all_param:.2f}"
-    )
 
 lora_config = peft.LoraConfig(
          r=8,
@@ -40,12 +30,11 @@ raw_datasets = load_dataset("../../../track2/demo/datas/wikitext", cache_dir="./
 # Preprocessing the datasets.
 # First we tokenize all the texts.
 column_names = list(raw_datasets["train"].features)
-text_column_name = "text" if "text" in column_names else column_names[0]
+text_column_name = "text"
 
 
 def tokenize_function(examples):
     output = tokenizer(examples[text_column_name])
-    # clm input could be much much longer than block_size
     return output
 
 
@@ -135,7 +124,7 @@ trainer = Trainer(
     compute_metrics=compute_metrics,
     preprocess_logits_for_metrics=preprocess_logits_for_metrics
 )
-trainer.args.save_steps= 20000
+trainer.args.save_steps= 1000
 import math
 metrics = trainer.evaluate()
 try:
@@ -144,7 +133,7 @@ except OverflowError:
     perplexity = float("inf")
 print(perplexity)
 trainer.train()
-model.save_pretrained("./new")
+model2.save_pretrained("./new")
 metrics = trainer.evaluate()
 
 try:
@@ -152,4 +141,4 @@ try:
 except OverflowError:
     perplexity = float("inf")
 print(perplexity)
-model.save_pretrained("./new")
+model2.save_pretrained("./new")
