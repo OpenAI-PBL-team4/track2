@@ -18,24 +18,31 @@ type_table = {#"torch.quint8":torch.quint8,
               "torch.float16":torch.float16}
 
 
-def apply_quantiztion(model, input, quant_dtype):
-    ## dynamic
-    quantization_result = ""
-    quantization_result += "#################Quantizing#####################\n"
-    quantized_model = torch.quantization.quantize_dynamic(model, {torch.nn.Linear}, dtype=type_table[quant_dtype])
-    model._modules['transformer'] = quantized_model._modules['transformer']
-    quantization_result += "#################Quantized#####################\n"
-    return quantization_result
-    # model_origin = M(model)
-    # model_origin.eval()
-    # model_origin.qconfig = torch.quantization.get_default_qconfig("qnnpack")
-    # # model.qconfig = torch.ao.quantization.get_default_qconfig('x86')
-    # model_origin.model.transformer.wte.qconfig = None
-    # model_origin.model.transformer.wpe.qconfig = None
-    # model_prepared = torch.ao.quantization.prepare(model_origin)
-    #
-    # model_int8 = torch.ao.quantization.convert(model_prepared)
-    # return model_int8
+def apply_quantiztion(model, type,input, quant_dtype,mode = None):
+    if type == "dynamic":
+	    quantization_result = ""
+	    quantization_result += "#################Quantizing#####################\n"
+	    quantized_model = torch.quantization.quantize_dynamic(model, {torch.nn.Linear}, dtype=type_table[quant_dtype])
+	    model._modules['transformer'] = quantized_model._modules['transformer']
+	    quantization_result += "#################Quantized#####################\n"
+	    return quantization_result
+	    # model_origin = M(model)
+	    # model_origin.eval()
+	    # model_origin.qconfig = torch.quantization.get_default_qconfig("qnnpack")
+	    # # model.qconfig = torch.ao.quantization.get_default_qconfig('x86')
+	    # model_origin.model.transformer.wte.qconfig = None
+	    # model_origin.model.transformer.wpe.qconfig = None
+	    # model_prepared = torch.ao.quantization.prepare(model_origin)
+	    #
+	    # model_int8 = torch.ao.quantization.convert(model_prepared)
+	    # return model_int8
+elif type == "static":
+	if mode == "eager":
+		eager_quant(model)
+	else:
+		fx_quant(model)
+else:
+	print("Wrong type")
 
 
 class QuantizedGPT2(nn.Module):
@@ -115,9 +122,3 @@ def fx_quant(model):
 	model_pre = calibration(model_pre)
 	
     model_quantized  = torch.quantization.convert_fx(model_pre, inplace=False,remove_qconfig=True) 
-
-
-if mode == "eager":
-	eager_quant(model)
-else:
-	fx_quant(model)
